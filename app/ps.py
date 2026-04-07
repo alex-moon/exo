@@ -1,6 +1,5 @@
 import json
 import logging
-import math
 import os
 from urllib.parse import quote_plus
 
@@ -22,6 +21,7 @@ class Ps:
         "disc_facility",
         "pl_orbper",
         "pl_rade",
+        "pl_radj",
         "pl_bmasse",
         "pl_bmassj",
         "pl_dens",
@@ -70,7 +70,7 @@ class Ps:
 
         planets = pd.read_csv(self.csv_filepath())
         planets['disc_year'] = planets['disc_year'].astype('Int64')
-        planets['bv'] = (5822.22 / planets['st_teff'])**0.25 - 0.719
+        planets['ci'] = (5822.22 / planets['st_teff'])**0.25 - 0.719  # from Gemini ...
         stars = {}
         for _, row in planets.iterrows():
             hostname = row['hostname']
@@ -80,7 +80,7 @@ class Ps:
                     "mag": self.null(row['sy_vmag']),
                     "ra": self.null(row['ra']),
                     "dec": self.null(row['dec']),
-                    "bv": self.null(row['bv']),
+                    "ci": self.null(row['ci']),
                     "dist": self.null(row['sy_dist']),
                     "p": [],
                 }
@@ -92,6 +92,7 @@ class Ps:
                 "fac": self.null(row['disc_facility']),
                 "orbper": self.null(row['pl_orbper']),
                 "rade": self.null(row['pl_rade']),
+                "radj": self.null(row['pl_radj']),
                 "masse": self.null(row['pl_bmasse']),
                 "massj": self.null(row['pl_bmassj']),
                 "dens": self.null(row['pl_dens']),
