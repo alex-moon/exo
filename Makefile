@@ -1,5 +1,7 @@
+PYTHON=venv/bin/python3
+
 load:
-	python3 -m app.main
+	$(PYTHON) -m app.main
 
 run:
 	npm run dev

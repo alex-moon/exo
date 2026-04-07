@@ -1,10 +1,10 @@
-import os
-import logging
-import requests
 import gzip
-import pandas as pd
 import json
-import math
+import logging
+import os
+
+import pandas as pd
+import requests
 
 
 class Hyg:
@@ -13,6 +13,9 @@ class Hyg:
     GZ_FILENAME = "hyg.gz"
     CSV_FILENAME = "hyg.csv"
     JSON_FILENAME = "hyg.json"
+
+    MAX_MAG = 5.5
+    MIN_MAG = -10.0
 
     def pull(self):
         self.download()
@@ -57,7 +60,7 @@ class Hyg:
         #     return
 
         df = pd.read_csv(self.csv_filepath())
-        stars = df[(df['mag'] <= 6.5) & (df['mag'] > -10)].copy()
+        stars = df[(df['mag'] <= self.MAX_MAG) & (df['mag'] > self.MIN_MAG)].copy()
         star_list = []
         for _, row in stars.iterrows():
             star_list.append({
