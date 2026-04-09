@@ -1,14 +1,19 @@
 import * as THREE from 'three';
 // @ts-ignore
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls';
 
 import {Sky} from "./sky.ts";
 import type {Star} from "./data.ts";
+import {Config} from "./config.ts";
+import type {Ground} from "./ground.ts";
+import {Plane} from "./plane.ts";
 
 export class Spherical extends Sky {
     private scene: THREE.Scene;
     private camera: THREE.PerspectiveCamera;
     private renderer: THREE.WebGLRenderer;
+    private ground: Ground;
+    private group: THREE.Group;
 
     constructor() {
         super();
@@ -18,29 +23,42 @@ export class Spherical extends Sky {
         this.renderer.setPixelRatio(window.devicePixelRatio);
 
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        this.camera.position.set(0, 0, 0.1);
+        this.camera.position.set(0, 2, -0.1); // facing toward positive Z = facing north
 
         const controls = new OrbitControls(this.camera, this.renderer.domElement);
         controls.enableZoom = false;
         controls.enablePan = false;
         controls.rotateSpeed = -0.25;
+        controls.target = new THREE.Vector3(0, 2, 0);
         canvas.addEventListener('wheel', (event) => {
             event.preventDefault();
             const sensitivity = 0.05;
             this.camera.fov += event.deltaY * sensitivity;
             this.camera.fov = Math.max(1, Math.min(this.camera.fov, 120));
             this.camera.updateProjectionMatrix();
-
             controls.rotateSpeed = -0.25 * (this.camera.fov / 120);
-        })
+        });
+        this.camera.lookAt(0, 2, 0);
 
+        this.ground = new Plane();
         this.scene = new THREE.Scene();
+        this.scene.add(this.ground.mesh);
+
+        this.group = new THREE.Group();
+        this.scene.add(this.group);
         this.animate();
     }
 
     animate() {
-        requestAnimationFrame(() => this.animate());
+        const lst = Config.cartographic.getLst();
+        const lat = Config.cartographic.getLat();
+        const y = THREE.MathUtils.degToRad(-lst);
+        const x = THREE.MathUtils.degToRad(90 - lat);
+        this.group.rotation.set(x, y, 0);
+
         this.renderer.render(this.scene, this.camera);
+
+        requestAnimationFrame(() => this.animate());
     }
 
     protected geometry(stars: Star[]) {
@@ -49,7 +67,7 @@ export class Spherical extends Sky {
         const colors: number[] = [];
         const sizes: number[] = [];
 
-        const radius = 500;
+        const radius = Config.RADIUS;
 
         stars.forEach(star => {
             const phi = (star.ra * 15) * (Math.PI / 180);
@@ -105,7 +123,7 @@ export class Spherical extends Sky {
         });
 
         const points = new THREE.Points(geometry, material);
-        this.scene.add(points);
+        this.group.add(points);
     }
 
     public ps(stars: Star[]): void {
@@ -145,9 +163,9 @@ export class Spherical extends Sky {
             fragmentShader,
             transparent: true,
             vertexColors: false,
-            depthTest: false,
+            depthTest: true,
         });
         const points = new THREE.Points(geometry, material);
-        this.scene.add(points);
+        this.group.add(points);
     }
 }
