@@ -6,13 +6,12 @@ import {Sky} from "./sky.ts";
 import type {Star} from "./data.ts";
 import {Config} from "./config.ts";
 import type {Ground} from "./ground.ts";
-import {Plane} from "./plane.ts";
 
 export class Spherical extends Sky {
     private scene: THREE.Scene;
     private camera: THREE.PerspectiveCamera;
     private renderer: THREE.WebGLRenderer;
-    private ground: Ground;
+    private ground?: Ground;
     private group: THREE.Group;
 
     constructor() {
@@ -40,18 +39,24 @@ export class Spherical extends Sky {
         });
         this.camera.lookAt(0, 2, 0);
 
-        this.ground = new Plane();
         this.scene = new THREE.Scene();
-        this.scene.add(this.ground.mesh);
 
         this.group = new THREE.Group();
         this.scene.add(this.group);
+
         this.animate();
     }
 
+    setGround(ground: Ground) {
+        this.ground = ground;
+        this.scene.add(ground.mesh);
+    }
+
     animate() {
-        const lst = Config.cartographic.getLst();
+        this.ground?.update();
+
         const lat = Config.cartographic.getLat();
+        const lst = Config.cartographic.getLst();
         const y = THREE.MathUtils.degToRad(-lst);
         const x = THREE.MathUtils.degToRad(90 - lat);
         this.group.rotation.set(x, y, 0);

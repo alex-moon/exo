@@ -1,4 +1,5 @@
 import type {Star} from "./data.ts";
+import type {Ground} from "./ground.ts";
 
 export abstract class Sky {
     protected readonly BLUE = '#4a9eff';
@@ -6,6 +7,8 @@ export abstract class Sky {
     abstract hyg(stars: Star[]): void;
 
     abstract ps(stars: Star[]): void;
+
+    abstract setGround(ground: Ground): void;
 
     protected ciToHex(ci: number) {
         if (ci < -0.4) return "#9bb2ff"

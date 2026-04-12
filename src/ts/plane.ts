@@ -21,4 +21,8 @@ export class Plane extends Ground {
         this.grid.rotation.x = -Math.PI / 2;
         this.mesh.add(this.grid);
     }
+
+    public update(): void {
+        // don't need to do anything
+    }
 }

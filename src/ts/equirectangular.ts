@@ -1,5 +1,8 @@
 import type {Star} from "./data.ts";
 import {Sky} from "./sky.ts";
+import {types} from "sass-embedded";
+import Error = types.Error;
+import type {Ground} from "./ground.ts";
 
 export class Equirectangular extends Sky {
     protected readonly ctx: CanvasRenderingContext2D;
@@ -73,5 +76,9 @@ export class Equirectangular extends Sky {
                 this.ctx.fillText(`${star.name} (${star.p.length})`, pos.x + 10, pos.y + 3);
             }
         });
+    }
+
+    setGround(_: Ground): void {
+        throw new Error('Attempted to add ground to equirectangular sky');
     }
 }

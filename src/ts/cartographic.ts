@@ -13,6 +13,9 @@ export class Cartographic {
         }, 1000 / 60);
     }
 
+    public getLng() {
+        return this.lng;
+    }
     public getLat() {
         return this.lat;
     }
