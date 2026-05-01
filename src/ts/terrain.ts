@@ -8,20 +8,14 @@ export class Terrain extends Ground {
     static readonly RESOLUTION = 256;
 
     private readonly geometry: THREE.BufferGeometry;
-    private readonly material: THREE.Material;
+    private readonly material: THREE.PointsMaterial;
 
     private x?: number;
     private y?: number;
-    private z?: number;
 
     public constructor() {
         super();
-        this.geometry = new THREE.PlaneGeometry(
-            1,
-            1,
-            Terrain.SEGMENTS,
-            Terrain.SEGMENTS
-        );
+        this.geometry = new THREE.PlaneGeometry(1, 1, Terrain.SEGMENTS, Terrain.SEGMENTS);
         this.material = new THREE.PointsMaterial({
             color: 0x00ff00,
             size: 2,
@@ -36,71 +30,69 @@ export class Terrain extends Ground {
         const lat = Config.cartographic.getLat();
 
         const {x, y, z} = this.lngLatToTile(lng, lat);
-        if (x === this.x && y === this.y && z === this.z) {
-            return;
-        }
+
+        const tileSizeMeters = this.width(lat);
+
+        const tileNW_Lng = this.tile2lng(x, z);
+        const tileNW_Lat = this.tile2lat(y, z);
+        const tileSE_Lng = this.tile2lng(x + 1, z);
+        const tileSE_Lat = this.tile2lat(y + 1, z);
+
+        const percentX = (lng - tileNW_Lng) / (tileSE_Lng - tileNW_Lng);
+        const percentY = (this.lat2y(lat) - this.lat2y(tileNW_Lat)) / (this.lat2y(tileSE_Lat) - this.lat2y(tileNW_Lat));
+
+        this.mesh.position.set(
+            -(percentX - 0.5) * tileSizeMeters,
+            0,
+            (percentY - 0.5) * tileSizeMeters
+        );
+
+        if (x === this.x && y === this.y) return;
 
         this.x = x;
         this.y = y;
-        this.z = z;
 
-        const width = this.width(lat);
-        this.geometry.scale(width, width, 1);
+        this.mesh.scale.set(tileSizeMeters, tileSizeMeters, 1);
+
         this.fetchTile(x, y, z).then(data => {
             const positions = this.geometry.attributes.position;
-
-            let maxAlt = 0;
-            const mins = {
-                vx: 0,
-                vy: 0,
-                px: 0,
-                py: 0,
-                pi: 0,
-            };
-            const maxes = {
-                vx: 0,
-                vy: 0,
-                px: 0,
-                py: 0,
-                pi: 0,
-            }
             const vertices = Terrain.SEGMENTS + 1;
-            const multiple = Math.floor(Terrain.RESOLUTION / vertices);
+            const stride = Terrain.RESOLUTION / vertices;
+
+                const px = Math.floor(percentX * (Terrain.RESOLUTION - 1));
+            const py = Math.floor(percentY * (Terrain.RESOLUTION - 1));
+            const pi = (py * Terrain.RESOLUTION + px) * 4;
+            const playerAlt = (data[pi] * 256 + data[pi + 1] + data[pi + 2] / 256) - 32768;
+
             for (let i = 0; i < positions.count; i++) {
                 const vx = i % vertices;
                 const vy = Math.floor(i / vertices);
 
-                mins.vx = Math.min(mins.vx, vx);
-                mins.vy = Math.min(mins.vy, vy);
-                maxes.vx = Math.max(maxes.vx, vx);
-                maxes.vy = Math.max(maxes.vy, vy);
+                const imgX = Math.floor(vx * stride);
+                const imgY = Math.floor(vy * stride);
+                const imgI = (imgY * Terrain.RESOLUTION + imgX) * 4;
 
-                const px = Math.floor(vx * multiple);
-                const py = Math.floor(vy * multiple);
-                const pi = (py * Terrain.RESOLUTION + px) * 4;
+                const r = data[imgI], g = data[imgI + 1], b = data[imgI + 2];
+                const rawAlt = (r * 256 + g + b / 256) - 32768;
 
-                mins.px = Math.min(mins.px, px);
-                mins.py = Math.min(mins.py, py);
-                mins.pi = Math.min(mins.pi, pi);
-                maxes.px = Math.max(maxes.px, px);
-                maxes.py = Math.max(maxes.py, py);
-                maxes.pi = Math.max(maxes.pi, pi);
-
-                const r = data[pi];
-                const g = data[pi + 1];
-                const b = data[pi + 2];
-                const alt = (r * 256 + g + b / 256) - 32768;
-                positions.setZ(i, alt);
-                maxAlt = Math.max(maxAlt, alt);
-            }
-            for (let i = 0; i < positions.count; i++) {
-                positions.setZ(i, positions.getZ(i) - maxAlt);
+                        positions.setZ(i, rawAlt - playerAlt);
             }
             positions.needsUpdate = true;
-            this.geometry.computeVertexNormals();
-        }).catch(error => {
-            console.error('Failed to fetch tile:', error);
         });
+    }
+
+    // Helper: Mercator projection Y coordinate
+    private lat2y(lat: number) {
+        return Math.log(Math.tan(lat * Math.PI / 360 + Math.PI / 4));
+    }
+
+    private tile2lng(x: number, z: number) {
+        return x / Math.pow(2, z) * 360 - 180;
+    }
+
+    private tile2lat(y: number, z: number) {
+        const n = Math.PI - 2 * Math.PI * y / Math.pow(2, z);
+        return 180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
     }
 
     private fetchTile(x: number, y: number, z: number) {
@@ -111,10 +103,7 @@ export class Terrain extends Ground {
         return img.decode().then(() => {
             const canvas = document.createElement('canvas');
             canvas.width = canvas.height = 256;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-                throw new Error('Failed to get 2D context for canvas');
-            }
+            const ctx = canvas.getContext('2d')!;
             ctx.drawImage(img, 0, 0);
             return ctx.getImageData(0, 0, 256, 256).data;
         });
@@ -124,15 +113,12 @@ export class Terrain extends Ground {
         const n = Math.pow(2, Terrain.ZOOM);
         const x = Math.floor(((lng + 180) / 360) * n);
         const latRad = (lat * Math.PI) / 180;
-        const y = Math.floor(
-            ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n
-        );
+        const y = Math.floor(((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n);
         return { x, y, z: Terrain.ZOOM };
     }
 
     private width(lat: number): number {
         const equatorCircumference = 40075016.686;
-        const latRad = lat * (Math.PI / 180);
-        return (equatorCircumference * Math.cos(latRad)) / Math.pow(2, Terrain.ZOOM);
+        return (equatorCircumference * Math.cos(lat * Math.PI / 180)) / Math.pow(2, Terrain.ZOOM);
     }
 }
