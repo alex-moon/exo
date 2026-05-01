@@ -1,16 +1,19 @@
 import * as THREE from 'three';
-// @ts-ignore
-import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls';
+import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 
 import {Sky} from "./sky.ts";
 import type {Star} from "./data.ts";
 import {Config} from "./config.ts";
 import type {Ground} from "./ground.ts";
+import {CSS2DRenderer} from 'three/addons/renderers/CSS2DRenderer.js';
+import {HostStarUi} from "./ui.ts";
+import {CSS2DObject} from "three/examples/jsm/renderers/CSS2DRenderer.js";
 
 export class Spherical extends Sky {
     private scene: THREE.Scene;
     private camera: THREE.PerspectiveCamera;
     private renderer: THREE.WebGLRenderer;
+    private css: CSS2DRenderer;
     private ground?: Ground;
     private group: THREE.Group;
 
@@ -20,6 +23,10 @@ export class Spherical extends Sky {
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.setPixelRatio(window.devicePixelRatio);
+
+        const ui = document.getElementById('ui') as HTMLDivElement;
+        this.css = new CSS2DRenderer({ element: ui });
+        this.css.setSize(window.innerWidth, window.innerHeight);
 
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         this.camera.position.set(0, 2, -0.1); // facing toward positive Z = facing north
@@ -62,8 +69,22 @@ export class Spherical extends Sky {
         this.group.rotation.set(x, y, 0);
 
         this.renderer.render(this.scene, this.camera);
+        this.css.render(this.scene, this.camera);
 
         requestAnimationFrame(() => this.animate());
+    }
+
+    protected position(star: Star) {
+        const radius = Config.RADIUS;
+
+        const phi = (star.ra * 15) * (Math.PI / 180);
+        const theta = star.dec * (Math.PI / 180);
+
+        const x = radius * Math.cos(theta) * Math.cos(phi);
+        const y = radius * Math.sin(theta);
+        const z = radius * Math.cos(theta) * Math.sin(phi);
+
+        return { x, y, z };
     }
 
     protected geometry(stars: Star[]) {
@@ -72,17 +93,9 @@ export class Spherical extends Sky {
         const colors: number[] = [];
         const sizes: number[] = [];
 
-        const radius = Config.RADIUS;
-
         stars.forEach(star => {
-            const phi = (star.ra * 15) * (Math.PI / 180);
-            const theta = star.dec * (Math.PI / 180);
-
-            const x = radius * Math.cos(theta) * Math.cos(phi);
-            const y = radius * Math.sin(theta);
-            const z = radius * Math.cos(theta) * Math.sin(phi);
-
-            positions.push(x, y, z);
+            const pos = this.position(star);
+            positions.push(pos.x, pos.y, pos.z);
 
             const color = new THREE.Color(this.ciToHex(star.ci));
             colors.push(color.r, color.g, color.b);
@@ -132,45 +145,16 @@ export class Spherical extends Sky {
     }
 
     public ps(stars: Star[]): void {
-        const geometry = this.geometry(stars);
-        const vertexShader = `
-          uniform float pointSize;
-          void main() {
-            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-            gl_PointSize = pointSize; 
-            gl_Position = projectionMatrix * mvPosition;
-          }
-        `;
-
-        const fragmentShader = `
-          uniform vec3 uiColor;
-          void main() {
-            float dist = distance(gl_PointCoord, vec2(0.5, 0.5));
-
-            float thickness = 0.1;
-            float outer = 0.5;
-            float inner = 0.5 - thickness;
-
-            float alpha = smoothstep(inner, inner + 0.01, dist) - smoothstep(outer, outer + 0.01, dist);
-        
-            if (alpha <= 0.0) discard;
-        
-            gl_FragColor = vec4(uiColor, alpha);
-          }
-        `;
-
-        const material = new THREE.ShaderMaterial({
-            uniforms: {
-                uiColor: { value: new THREE.Color(0x4a9eff) },
-                pointSize: { value: 16.0 }
-            },
-            vertexShader,
-            fragmentShader,
-            transparent: true,
-            vertexColors: false,
-            depthTest: true,
+        stars.forEach(star => {
+            if (!star.p) return;
+            if (star.p.length < 2) return;
+            if (!star.dist) return;
+            if (star.dist > 1000) return;
+            const ui = new HostStarUi(star);
+            const obj = new CSS2DObject(ui.getDiv());
+            const pos = this.position(star);
+            obj.position.set(pos.x, pos.y, pos.z);
+            this.group.add(obj);
         });
-        const points = new THREE.Points(geometry, material);
-        this.group.add(points);
     }
 }

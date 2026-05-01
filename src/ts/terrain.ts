@@ -22,11 +22,12 @@ export class Terrain extends Ground {
             Terrain.SEGMENTS,
             Terrain.SEGMENTS
         );
-        this.material = new THREE.LineBasicMaterial({
+        this.material = new THREE.PointsMaterial({
             color: 0x00ff00,
-            linewidth: 2,
+            size: 2,
+            sizeAttenuation: false,
         });
-        this.mesh = new THREE.LineSegments(this.geometry, this.material);
+        this.mesh = new THREE.Points(this.geometry, this.material);
         this.mesh.rotation.x = -Math.PI / 2;
     }
 
@@ -92,7 +93,6 @@ export class Terrain extends Ground {
                 positions.setZ(i, alt);
                 maxAlt = Math.max(maxAlt, alt);
             }
-            console.log(mins, maxes);
             for (let i = 0; i < positions.count; i++) {
                 positions.setZ(i, positions.getZ(i) - maxAlt);
             }

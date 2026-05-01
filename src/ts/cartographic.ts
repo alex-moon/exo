@@ -7,10 +7,6 @@ export class Cartographic {
         date: Date = new Date(),
     ) {
         this.time = date.getTime();
-
-        window.setInterval(() => {
-            this.time += 1000;
-        }, 1000 / 60);
     }
 
     public getLng() {

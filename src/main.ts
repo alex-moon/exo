@@ -5,6 +5,7 @@ import {Spherical} from "./ts/spherical.ts";
 import {Combined} from "./ts/combined.ts";
 // import {Plane} from "./ts/plane.ts";
 import {Terrain} from "./ts/terrain.ts";
+import {Osm} from "./ts/osm.ts";
 
 const data = new Data();
 const hyg = await data.hyg()
@@ -14,6 +15,7 @@ const sky = new Spherical();
 const ground = new Combined([
     // new Plane(),
     new Terrain(),
+    new Osm(),
 ]);
 sky.setGround(ground);
 sky.hyg(hyg);
