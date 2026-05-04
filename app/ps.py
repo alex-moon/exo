@@ -98,10 +98,34 @@ class Ps:
                 "dens": self.null(row['pl_dens']),
             })
 
+        for hostname, star in stars.items():
+            if len(star["p"]) > 1:
+                wiki_url = self.get_wiki_url(hostname)
+                if wiki_url:
+                    star["wiki"] = wiki_url
+
+                for planet in star["p"]:
+                    wiki_url = self.get_wiki_url(planet["name"])
+                    if wiki_url:
+                        planet["wiki"] = wiki_url
+
         with open(json_filepath, 'w') as f:
             json.dump(list(stars.values()), f, indent=2)
 
         logging.info('file loaded: ' + json_filepath)
+
+    def get_wiki_url(self, title):
+        try:
+            url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{title.replace(' ', '_')}"
+            response = requests.get(url, timeout=5, headers={'User-Agent': 'Exo: https://github.com/alex-moon/exo'})
+            if response.status_code == 200:
+                data = response.json()
+                wiki_url = data.get('content_urls', {}).get('desktop', {}).get('page')
+                if wiki_url and 'List_of' not in wiki_url:
+                    return wiki_url
+        except Exception as e:
+            logging.error(f"Error fetching Wikipedia for {title}: {e}")
+        return None
 
     def null(self, value):
         if pd.isna(value):

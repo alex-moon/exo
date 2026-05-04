@@ -7,8 +7,35 @@
 </head>
 <body>
 <div id="app">
+  <header>
+    <h1>Exo</h1>
+    <a href="https://github.com/alex-moon/exo" target="_blank">GitHub Repo</a>
+  </header>
   <div id="ui"></div>
   <canvas id="canvas"></canvas>
+  <div id="wiki-panel" class="hidden">
+    <div class="content">
+      <div class="loading">Loading...</div>
+    </div>
+  </div>
+  <footer>
+    <div class="input-group">
+      <label for="lat">Lat:</label>
+      <input type="number" id="lat" step="0.0001">
+    </div>
+    <div class="input-group">
+      <label for="lng">Lng:</label>
+      <input type="number" id="lng" step="0.0001">
+    </div>
+    <div class="input-group">
+      <label for="date">Date:</label>
+      <input type="date" id="date">
+    </div>
+    <div class="input-group">
+      <label for="time">Time:</label>
+      <input type="time" id="time">
+    </div>
+  </footer>
 </div>
 <script type="module" src="/src/main.ts"></script>
 </body>

@@ -5,3 +5,10 @@ load:
 
 run:
 	npm run dev
+
+fix:
+	npm run format
+	npm run fix
+
+lint:
+	npm run lint

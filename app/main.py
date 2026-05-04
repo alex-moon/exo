@@ -14,7 +14,7 @@ class Exo:
         self.ps = ps
 
     def pull(self):
-        self.hyg.pull()
+        # self.hyg.pull()
         self.ps.pull()
 
     # @todo fucking hate this

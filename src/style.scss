@@ -1,62 +1,154 @@
-@use "scss/config.scss" as config;
+@import '../node_modules/modern-normalize/modern-normalize.css';
 
 body {
-    background: config.$space-black;
+  background: #050508;
+  color: #fff;
+  overflow: hidden;
 
-    div#ui {
+  header,
+  footer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    padding: 10px 20px;
+    z-index: 1000;
+    backdrop-filter: blur(5px);
+  }
+
+  header {
+    top: 0;
+    height: 50px;
+    justify-content: space-between;
+    h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      text-transform: uppercase;
+    }
+    a {
+      color: #4af;
+      text-decoration: none;
+    }
+  }
+
+  footer {
+    bottom: 0;
+    justify-content: center;
+    gap: 20px;
+    .input-group {
+      display: flex;
+      gap: 5px;
+      font: 0.8rem monospace;
+      input {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: #fff;
+        width: 80px;
+      }
+    }
+  }
+
+  #ui {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    .road-label {
+      color: #0f0;
+      font: 10px monospace;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 2px 5px;
+    }
+    .host-star {
+      color: rgba(255, 255, 255, 0.5);
+      font: 10px monospace;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 4px 8px;
+      position: relative;
+      &.has-wiki {
+        pointer-events: auto;
+        cursor: pointer;
+        color: #fff;
+        &:hover {
+          border-left: 1px solid #fff;
+          .planets {
+            display: block;
+          }
+        }
+      }
+      .planets {
+        display: none;
         position: absolute;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        pointer-events: none;
-        display: block;
-
-        .road-label {
-            color: #00ff00;
-            font-size: 10px;
-            font-family: monospace;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 2px 5px;
-            border-radius: 3px;
-            pointer-events: none;
-        }
-
-        .host-star {
-            pointer-events: auto;
-            color: #fff;
-            font: 10px monospace;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 4px 8px;
-            border-radius: 3px;
-            cursor: pointer;
-            position: relative;
-            border-left: 1px solid rgba(0, 0, 0, 0);
-
-            .planets {
-                display: none;
-                list-style: none;
-                margin-left: 0;
-                position: absolute;
-                left: -1px;
-                background: rgba(0, 0, 0, 0.7);
-                padding: 4px 8px;
-                border-radius: 3px;
-                width: max-content;
-                border-left: 1px solid #fff;
-            }
-
-            &:hover {
-                border-left: 1px solid #fff;
-                .planets {
-                    display: block;
-                }
-            }
-        }
+        left: -1px;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 4px 8px;
+        width: max-content;
+        border-left: 1px solid #fff;
+      }
     }
+  }
 
-    canvas#canvas {
-        width: 100vw;
-        height: 100vh;
+  #wiki-panel {
+    position: absolute;
+    inset: 60px auto 60px 20px;
+    width: 300px;
+    background: rgba(0, 0, 0, 0.85);
+    padding: 20px;
+    border: 1px solid #444;
+    overflow-y: auto;
+    z-index: 999;
+    transition: transform 0.3s;
+    border-radius: 8px;
+    &.hidden {
+      transform: translateX(-350px);
     }
+    .content {
+      h2 {
+        margin-top: 0;
+      }
+      img {
+        max-width: 100%;
+        margin-bottom: 15px;
+      }
+      a {
+        color: #4af;
+        text-decoration: none;
+        font-weight: bold;
+      }
+    }
+    .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: none;
+      border: none;
+      color: #888;
+      font-size: 20px;
+    }
+    .back-btn {
+      background: none;
+      border: none;
+      color: #4af;
+      display: block;
+      margin-bottom: 10px;
+    }
+    .p-list {
+      margin-top: 20px;
+      border-top: 1px solid #444;
+      ul {
+        list-style: none;
+        padding: 0;
+      }
+      a {
+        color: #4af;
+        text-decoration: none;
+      }
+    }
+  }
+
+  canvas {
+    width: 100vw;
+    height: 100vh;
+  }
 }
