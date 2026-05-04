@@ -2,6 +2,9 @@ import {Ground} from "./ground.ts";
 import * as THREE from "three";
 import {Config} from "./config.ts";
 import {CSS2DObject} from 'three/addons/renderers/CSS2DRenderer.js';
+import {TerrainProvider} from "./provider/terrain.ts";
+import {OsmProvider} from "./provider/osm.ts";
+import {GeoUtils} from "./utils/geo.ts";
 
 export class Osm extends Ground {
     static readonly ZOOM = 15;
@@ -20,8 +23,9 @@ export class Osm extends Ground {
     public update(): void {
         const lng = Config.cartographic.getLng();
         const lat = Config.cartographic.getLat();
+        const z = Osm.ZOOM;
 
-        const {x, y, z} = this.lngLatToTile(lng, lat);
+        const {x, y} = GeoUtils.lngLatToTile(lng, lat, z);
         if (x === this.x && y === this.y && z === this.z) {
             return;
         }
@@ -33,24 +37,15 @@ export class Osm extends Ground {
         // Clear previous roads
         (this.mesh as THREE.Group).clear();
 
-        const bbox = this.tileToBBox(x, y, z);
-        this.fetchRoads(bbox).then(data => {
+        OsmProvider.getInstance().getRoads(x, y, z).then(data => {
             this.renderRoads(data, lat, lng);
         }).catch(err => console.error("OSM Fetch Error:", err));
     }
 
-    private async fetchRoads(bbox: string) {
-        const query = `[out:json][timeout:25];(way["highway"](${bbox}););out body;>;out skel qt;`;
-        const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
-
-        const response = await fetch(url);
-        if (!response.ok) throw new Error("Overpass API error");
-        return response.json();
-    }
-    private renderRoads(data: any, centerLat: number, centerLng: number) {
+    private async renderRoads(data: any, centerLat: number, centerLng: number) {
         const nodes = new Map();
-        const roadGroups = new Map<string, THREE.Vector3[]>();
-        const tileSize = this.width(centerLat);
+        const roadGroups = new Map<string, {lng: number, lat: number}[]>();
+        const tileSize = GeoUtils.width(centerLat, Osm.ZOOM);
 
         // 1. Map nodes
         data.elements.forEach((el: any) => {
@@ -66,8 +61,7 @@ export class Osm extends Ground {
                 el.nodes.forEach((nodeId: number) => {
                     const node = nodes.get(nodeId);
                     if (node) {
-                        const local = this.lngLatToLocal(node[0], node[1], centerLng, centerLat, tileSize);
-                        roadGroups.get(name)!.push(new THREE.Vector3(local.x, 0.2, -local.y));
+                        roadGroups.get(name)!.push({lng: node[0], lat: node[1]});
                     }
                 });
             }
@@ -76,8 +70,18 @@ export class Osm extends Ground {
         // 3. Draw and Label
         const material = new THREE.LineBasicMaterial({ color: 0x00ff00, opacity: 0.5, transparent: true });
 
-        roadGroups.forEach((points, name) => {
-            // Draw the road geometry (simplified)
+        const provider = TerrainProvider.getInstance();
+        const playerAlt = await provider.getAlt(centerLng, centerLat);
+
+        for (const [name, path] of roadGroups) {
+            const points: THREE.Vector3[] = [];
+            for (const p of path) {
+                const local = this.lngLatToLocal(p.lng, p.lat, centerLng, centerLat, tileSize);
+                const alt = await provider.getAlt(p.lng, p.lat);
+                points.push(new THREE.Vector3(local.x, alt - playerAlt + 0.2, -local.y));
+            }
+
+            // Draw the road geometry
             const geometry = new THREE.BufferGeometry().setFromPoints(points);
             const line = new THREE.Line(geometry, material);
             this.mesh.add(line);
@@ -89,7 +93,7 @@ export class Osm extends Ground {
             const label = this.createRoadLabel(name);
             label.position.copy(nearestPoint);
             this.mesh.add(label);
-        });
+        }
     }
 
     private findNearestPointOnPath(target: THREE.Vector3, path: THREE.Vector3[]): THREE.Vector3 {
@@ -125,36 +129,5 @@ export class Osm extends Ground {
         const y = (lat - centerLat) * latScale;
 
         return { x, y };
-    }
-
-    private tileToBBox(x: number, y: number, z: number) {
-        const e = this.tile2lng(x + 1, z);
-        const w = this.tile2lng(x, z);
-        const s = this.tile2lat(y + 1, z);
-        const n = this.tile2lat(y, z);
-        return `${s},${w},${n},${e}`;
-    }
-
-    private tile2lng(x: number, z: number) {
-        return (x / Math.pow(2, z) * 360 - 180);
-    }
-
-    private tile2lat(y: number, z: number) {
-        const n = Math.PI - 2 * Math.PI * y / Math.pow(2, z);
-        return (180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n))));
-    }
-
-    private lngLatToTile(lng: number, lat: number) {
-        const n = Math.pow(2, Osm.ZOOM);
-        const x = Math.floor(((lng + 180) / 360) * n);
-        const latRad = (lat * Math.PI) / 180;
-        const y = Math.floor(((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n);
-        return { x, y, z: Osm.ZOOM };
-    }
-
-    private width(lat: number): number {
-        const equatorCircumference = 40075016.686;
-        const latRad = lat * (Math.PI / 180);
-        return (equatorCircumference * Math.cos(latRad)) / Math.pow(2, Osm.ZOOM);
     }
 }
