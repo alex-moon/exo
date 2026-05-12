@@ -25,12 +25,12 @@ export interface Star {
 
 export class Data {
   async hyg() {
-    const response = await fetch('/hyg.json');
+    const response = await fetch('/data/hyg.json');
     return await response.json();
   }
 
   async ps() {
-    const response = await fetch('/ps.json');
+    const response = await fetch('/data/ps.json');
     return await response.json();
   }
 }

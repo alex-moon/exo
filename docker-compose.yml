@@ -1,0 +1,11 @@
+services:
+  exo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: exo:latest
+    ports:
+      - "10086:80"
+    volumes:
+      - /opt/exo/data:/usr/share/nginx/html/data
+    restart: unless-stopped

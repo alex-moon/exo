@@ -106,7 +106,7 @@ class Ps:
 
                 for planet in star["p"]:
                     wiki_url = self.get_wiki_url(planet["name"])
-                    if wiki_url:
+                    if wiki_url and wiki_url != star["wiki"]:
                         planet["wiki"] = wiki_url
 
         with open(json_filepath, 'w') as f:
